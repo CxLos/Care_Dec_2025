@@ -21,7 +21,7 @@ import requests
 import json
 import base64
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials
 # --------------------------------
 import dash
 from dash import dcc, html, Input, Output, State, dash_table
@@ -56,11 +56,11 @@ encoded_key = os.getenv("GOOGLE_CREDENTIALS")
 
 if encoded_key:
     json_key = json.loads(base64.b64decode(encoded_key).decode("utf-8"))
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(json_key, scope)
+    creds = Credentials.from_service_account_info(json_key, scopes=scope)
 else:
     creds_path = r"C:\Users\CxLos\OneDrive\Documents\BMHC\Data\bmhc-timesheet-4808d1347240.json"
     if os.path.exists(creds_path):
-        creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
+        creds = Credentials.from_service_account_file(creds_path, scopes=scope)
     else:
         raise FileNotFoundError("Service account JSON file not found and GOOGLE_CREDENTIALS is not set.")
 
@@ -376,7 +376,7 @@ group_pie=px.pie(
         color='black'
     )
 ).update_traces(
-    rotation=150,
+    rotation=100,
     textposition='auto',
     insidetextorientation='horizontal', 
     texttemplate='%{value}<br>(%{percent:.2%})',
@@ -526,7 +526,7 @@ task_pie=px.pie(
         color='black'
     )
 ).update_traces(
-    rotation=170,
+    rotation=100,
     textposition='auto',
     insidetextorientation='horizontal', 
     texttemplate='%{value}<br>(%{percent:.2%})',
@@ -546,64 +546,28 @@ df['Tags'] = (
             .str.strip()
             .replace({
                 "" : "N/A",
-                # "" : "",
+                "Research, writing, and editing": "Research writing & editing"
             })
     )
 
-tag_categories = [
-    "Search icon",
-    "Add/Search tags",
-    "AmeriCorps Duties",
-    "Board Support",
-    "Brand Messaging Strategy",
-    "Care Network",
-    "Data Archiving",
-    "Documentation",
-    "Email",
-    "Equipment",
-    "Event Planning",
-    "Fundraising",
-    "Grant",
-    "Graphic and/or Creatives Design",
-    "Handout",
-    "HealthyCuts",
-    "HR Support",
-    "Impromptu Discussion",
-    "IT",
-    "Know Your Numbers",
-    "Letter",
-    "MarCom Playbook",
-    "Materials Review",
-    "Meeting",
-    "Movement Is Medicine",
-    "Newsletter / Announcements",
-    "OverComing Mental Hellness",
-    "Philanthropy Call",
-    "Philanthropy Email",
-    "Phone Call",
-    "Planned Change",
-    "Polls/Surveys",
-    "Presentation",
-    "Proposal",
-    "PSH Work",
-    "Public Relations / Press Releases",
-    "Recent Change",
-    "Research, writing, and editing",
-    "Social Media and/or Youtube",
-    "Sustainability Binder",
-    "Tabling Event",
-    "Timesheet / Impact Reporting",
-    "Training",
-    "Videography",
-    "Website"
+tag_unique = [
+"N/A",
+'Tabling Event', 'AmeriCorps Duties, Handout', 'Presentation', 'Training', 'Movement Is Medicine', 'Timesheet / Impact Reporting', 'Handout', 'Care Network, Handout, Tabling Event', 'Tabling Event, Handout', 'Data Archiving, Documentation', 'Meeting, Movement Is Medicine', 'Meeting', 'Materials Review', '', 'Impromptu Discussion', 'AmeriCorps Duties', 'Documentation, Event Planning, Handout, Movement Is Medicine, Presentation, Research; writing; and editing, Sustainability Binder', 'PSH Work', 'Movement Is Medicine, Tabling Event', 'Newsletter / Announcements', 'HealthyCuts', 'Graphic and/or Creatives Design', 'Event Planning, Meeting, Movement Is Medicine, Phone Call', 'Phone Call', 'Event Planning, Meeting, Movement Is Medicine', 'Continuation, PSH Work', 'Social Media and/or Youtube', 'Board Support', 'Movement Is Medicine, Phone Call, Meeting', 'Documentation', 'Care Network', 'Event Planning', 'Movement Is Medicine, Data Archiving, Email, Documentation', 'Social Media and/or Youtube, Videography, Graphic and/or Creatives Design', 'Movement Is Medicine, Meeting', 'Graphic and/or Creatives Design, Social Media and/or Youtube, Videography', 'Documentation, HealthyCuts, Recent Change', 'Meeting, Event Planning, Phone Call', 'Polls/Surveys, Tabling Event', 'Meeting, Movement Is Medicine, Phone Call', 'Brand Messaging Strategy, Newsletter / Announcements'
 ]
 
-tag_normalized = {cat.lower().strip(): cat for cat in tag_categories}
+# Flatten and clean the list
+tag_categories = sorted(set(
+    item.strip()
+    for entry in tag_unique if entry  # Ensure we only process non-empty entries
+    for item in entry.split(',')      # Split by comma if there are multiple entries
+))
+
+# Normalize the categories for matching
+tag_normalized = {cat.lower(): cat for cat in tag_categories}
 counter = Counter()
 
+# Count occurrences of each category, regardless of combinations
 for entry in df['Tags']:
-    
-    # Split and clean each category
     items = [i.strip().lower() for i in entry.split(",")]
     for item in items:
         if item in tag_normalized:
@@ -696,10 +660,10 @@ tag_pie=px.pie(
         color='black'
     )
 ).update_traces(
-    rotation=190,
+    rotation=180,
     textposition='auto',
     insidetextorientation='horizontal', 
-    texttemplate='%{value}<br>(%{percent:.2%})',
+    texttemplate='%{percent:.2%}',
     # textinfo='none',  # Hides all labels
     # textposition='none',  # Ensures nothing is placed inside or outside the pie
     # texttemplate=None,  # Optional, but reinforces no custom text
@@ -830,7 +794,7 @@ collab_pie=px.pie(
         color='black'
     )
 ).update_traces(
-    rotation=140,
+    rotation=70,
     textposition='auto',
     insidetextorientation='horizontal', 
     texttemplate='%{value}<br>(%{percent:.2%})',
@@ -862,16 +826,10 @@ df['User'] = (
                 "kimberly.holiday" : "Kimberly Holiday",
                 "antonio.montgomery" : "Antonio Montgomery",
                 "arianna.williams" : "Arianna Williams",
+                "carlos.bautista" : "Carlos Bautista",
                 "christi.freeman" : "Christi Freeman",
-                
-                # "Coby Albrecht" : "Coby Albrecht",
-                # "Michael Lambert" : "Michael Lambert",
-                # "Areebah Mubin" : "Areebah Mubin",
-                # "Jordan Calbert" : "Jordan Calbert",
-                # "Sashricaa Manoj Kumar" : "Sashricaa Manoj Kumar",
-                # "Eric Roberts" : "Eric Roberts",    
-                # "Angelita Delagarza" : "Angelita Delagarza",
-                "" : "",
+                "pierre.craney" : "Pierre Craney",
+                "wanda.henley" : "Wanda Henley",
                 "" : "",
             })
     )
@@ -976,7 +934,7 @@ user_pie=px.pie(
         color='black'
     )
 ).update_traces(
-    rotation=150,
+    rotation=100,
     textposition='auto',
     insidetextorientation='horizontal', 
     texttemplate='%{value}<br>(%{percent:.2%})',
@@ -1400,8 +1358,8 @@ html.Div(
             
             dash_table.DataTable(
                 id='applications-table',
-                data=data,
-                columns=columns,
+                data=data, # type: ignore
+                columns=columns, # type: ignore
                 page_size=10,
                 sort_action='native',
                 filter_action='native',
@@ -1426,7 +1384,7 @@ html.Div(
                     'whiteSpace': 'normal',
                     'height': 'auto',
                 },
-                style_cell_conditional=[
+                style_cell_conditional=[ # type:ignore
                     # make the index column narrow and centered
                     {'if': {'column_id': '#'},
                     'width': '20px', 'minWidth': '60px', 'maxWidth': '60px', 'textAlign': 'center'},
